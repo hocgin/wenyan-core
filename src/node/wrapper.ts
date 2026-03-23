@@ -51,6 +51,8 @@ export async function renderAndPublish(
             source_url: gzhContent.source_url,
         },
         {
+            appId: options.appId,
+            appSecret: options.appSecret,
             relativePath: absoluteDirPath,
         },
     );

@@ -7,7 +7,10 @@ export interface RenderOptions {
     footnote: boolean;
 }
 
-export interface PublishOptions extends RenderOptions {}
+export interface PublishOptions extends RenderOptions {
+    appId?: string;
+    appSecret?: string;
+}
 
 export interface ClientPublishOptions extends RenderOptions {
     server?: string;
