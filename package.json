@@ -1,5 +1,5 @@
 {
-  "name": "@wenyan-md/core",
+  "name": "@hocgin/wenyan-core",
   "version": "3.0.0",
   "description": "Core library for Wenyan markdown rendering & publishing",
   "author": "Lei <caol64@gmail.com> (https://github.com/caol64)",
