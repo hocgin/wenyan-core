@@ -3,6 +3,7 @@ import type { HttpAdapter } from "./http.js";
 const tokenUrl = "https://api.weixin.qq.com/cgi-bin/token";
 const publishUrl = "https://api.weixin.qq.com/cgi-bin/draft/add";
 const uploadUrl = "https://api.weixin.qq.com/cgi-bin/material/add_material";
+const submitUrl = "https://api.weixin.qq.com/cgi-bin/freepublish/submit";
 
 export interface WechatPublishOptions {
     title: string;
@@ -11,6 +12,7 @@ export interface WechatPublishOptions {
     thumb_media_id: string;
     content_source_url?: string;
 }
+export interface WechatSubmitOptions { media_id: string }
 
 export interface WechatErrorResponse {
     errcode: number;
@@ -31,9 +33,14 @@ export interface WechatPublishResponse {
     media_id: string;
 }
 
+export interface WechatSubmitResponse {
+    publish_id: string;
+}
+
 type UploadResult = WechatUploadResponse | WechatErrorResponse;
 type TokenResult = WechatTokenResponse | WechatErrorResponse;
 type PublishResult = WechatPublishResponse | WechatErrorResponse;
+type SubmitResult = WechatSubmitResponse | WechatErrorResponse;
 
 export function createWechatClient(httpAdapter: HttpAdapter) {
     return {
@@ -84,6 +91,19 @@ export function createWechatClient(httpAdapter: HttpAdapter) {
             if (!res.ok) throw new Error(await res.text());
 
             const data: PublishResult = await res.json();
+            assertWechatSuccess(data);
+            return data;
+        },
+
+        async submitArticle(accessToken: string, options: WechatSubmitOptions): Promise<WechatSubmitResponse> {
+            const res = await httpAdapter.fetch(`${submitUrl}?access_token=${accessToken}`, {
+                method: "POST",
+                body: JSON.stringify(options),
+            });
+
+            if (!res.ok) throw new Error(await res.text());
+
+            const data: SubmitResult = await res.json();
             assertWechatSuccess(data);
             return data;
         },

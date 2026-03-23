@@ -3,7 +3,7 @@ import { fileFromPath } from "formdata-node/file-from-path";
 import path from "node:path";
 import { stat } from "node:fs/promises";
 import { RuntimeEnv } from "./runtimeEnv.js";
-import { WechatPublishResponse, WechatUploadResponse } from "../wechat.js";
+import {WechatPublishResponse, WechatSubmitOptions, WechatSubmitResponse, WechatUploadResponse} from "../wechat.js";
 import { nodeHttpAdapter } from "./nodeHttpAdapter.js";
 import { NodeTokenStorageAdapter } from "./tokenStoreNodeAdapter.js";
 import { NodeUploadCacheAdapter } from "./uploadCacheNodeAdapter.js";
@@ -15,6 +15,10 @@ interface PublishOptions {
     appId?: string;
     appSecret?: string;
     relativePath?: string;
+}
+interface SubmitOptions {
+    appId?: string;
+    appSecret?: string;
 }
 
 async function uploadImage(
@@ -170,4 +174,24 @@ export async function publishToDraft(
     options: PublishOptions = {},
 ): Promise<WechatPublishResponse> {
     return publishToWechatDraft({ title, content, cover }, options);
+}
+
+
+export async function submit(
+    submitOptions: WechatSubmitOptions,
+    publishOptions: SubmitOptions = {},
+): Promise<WechatSubmitResponse> {
+    const { appId, appSecret } = publishOptions;
+    const appIdFinal = appId ?? process.env.WECHAT_APP_ID;
+    const appSecretFinal = appSecret ?? process.env.WECHAT_APP_SECRET;
+
+    const accessToken = await wechatPublisher.getAccessTokenWithCache(appIdFinal, appSecretFinal);
+
+    const data = await wechatPublisher.submit(accessToken, submitOptions);
+
+    if (data.publish_id) {
+        return data;
+    }
+
+    throw new Error(`发布公众号失败: ${JSON.stringify(data)}`);
 }

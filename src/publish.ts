@@ -6,7 +6,7 @@ import {
     WechatPublishOptions,
     WechatPublishResponse,
     WechatUploadResponse,
-    type WechatClient,
+    type WechatClient, WechatSubmitResponse, WechatSubmitOptions,
 } from "./wechat.js";
 
 export interface ArticleOptions {
@@ -17,22 +17,28 @@ export interface ArticleOptions {
     source_url?: string;
 }
 
+export interface SubmitOptions {
+    media_id: string;
+}
+
 export class WechatPublisher {
     private tokenStore: TokenStore | undefined;
     private uploadCacheStore: UploadCacheStore | undefined;
     private uploadMaterial: WechatClient["uploadMaterial"];
     private publishArticle: WechatClient["publishArticle"];
     private fetchAccessToken: WechatClient["fetchAccessToken"];
+    private submitArticle: WechatClient["submitArticle"];
 
     constructor(
         httpAdapter: HttpAdapter,
         tokenStoreAdapter?: TokenStorageAdapter,
         uploadCacheStoreAdapter?: UploadCacheStorageAdapter,
     ) {
-        const { uploadMaterial, publishArticle, fetchAccessToken } = createWechatClient(httpAdapter);
+        const { uploadMaterial, publishArticle, fetchAccessToken, submitArticle } = createWechatClient(httpAdapter);
         this.uploadMaterial = uploadMaterial;
         this.publishArticle = publishArticle;
         this.fetchAccessToken = fetchAccessToken;
+        this.submitArticle = submitArticle;
         this.tokenStore = tokenStoreAdapter ? new TokenStore(tokenStoreAdapter) : undefined;
         this.uploadCacheStore = uploadCacheStoreAdapter ? new UploadCacheStore(uploadCacheStoreAdapter) : undefined;
     }
@@ -74,5 +80,9 @@ export class WechatPublisher {
 
     public async publishToDraft(accessToken: string, options: WechatPublishOptions): Promise<WechatPublishResponse> {
         return await this.publishArticle(accessToken, options);
+    }
+
+    public async submit(accessToken: string, options: WechatSubmitOptions): Promise<WechatSubmitResponse> {
+        return await this.submitArticle(accessToken, options);
     }
 }
