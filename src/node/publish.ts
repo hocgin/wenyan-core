@@ -185,7 +185,7 @@ export async function submit(
     const appIdFinal = appId ?? process.env.WECHAT_APP_ID;
     const appSecretFinal = appSecret ?? process.env.WECHAT_APP_SECRET;
 
-    const accessToken = await wechatPublisher.getAccessTokenWithCache(appIdFinal, appSecretFinal);
+    const accessToken = await wechatPublisher.getAccessTokenWithCache(appIdFinal as any, appSecretFinal as any);
 
     const data = await wechatPublisher.submit(accessToken, submitOptions);
 
