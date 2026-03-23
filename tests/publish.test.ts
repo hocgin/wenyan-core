@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { publishToDraft } from "../src/node/publish.js";
+import {publishToDraft, submit} from "../src/node/publish.js";
 
 vi.mock("../src/node/wechatApi", () => {
     return {
@@ -13,6 +13,9 @@ vi.mock("../src/node/wechatApi", () => {
         publishArticle: vi.fn().mockResolvedValue({
             media_id: "mock_media_id",
         }),
+        submit: vi.fn().mockResolvedValue({
+            publish_id: "mock_publish_id",
+        }),
     };
 });
 
@@ -23,6 +26,13 @@ describe("publish.ts tests", () => {
     it("should publish article successfully", async () => {
         const result = await publishToDraft("自动化测试", "<p>正文</p>", "tests/wenyan.jpg");
         expect(result).toHaveProperty("media_id", "mock_media_id");
+    });
+
+    it("should submit article successfully", async () => {
+        const result = await submit({
+            media_id: "mock_media_id",
+        });
+        expect(result).toHaveProperty("publish_id", "mock_publish_id");
     });
 
     it("should throw error when no media_id returned", async () => {
