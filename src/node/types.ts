@@ -16,6 +16,8 @@ export interface ClientPublishOptions extends RenderOptions {
     server?: string;
     apiKey?: string;
     clientVersion?: string;
+    appId?: string;
+    appSecret?: string;
 }
 
 export interface RenderContext {
