@@ -7,7 +7,7 @@ import {WechatPublishResponse, WechatSubmitOptions, WechatSubmitResponse, Wechat
 import { nodeHttpAdapter } from "./nodeHttpAdapter.js";
 import { NodeTokenStorageAdapter } from "./tokenStoreNodeAdapter.js";
 import { NodeUploadCacheAdapter } from "./uploadCacheNodeAdapter.js";
-import { ArticleOptions, WechatPublisher } from "../publish.js";
+import {ArticleOptions, NewsPicOptions, WechatPublisher} from "../publish.js";
 
 const mediaIdMapping = new Map<string, string>(); // 微信 url 和 media_id 的映射
 const wechatPublisher = new WechatPublisher(nodeHttpAdapter, new NodeTokenStorageAdapter(), new NodeUploadCacheAdapter());
@@ -66,6 +66,24 @@ async function uploadImage(
     // 写入映射
     mediaIdMapping.set(data.url, data.media_id);
     return data;
+}
+
+async function uploadBatchImages(
+    imageUrls: [string],
+    accessToken: string,
+    relativePath?: string,
+){
+    const uploadPromises = imageUrls.map(async (dataSrc) => {
+        if (dataSrc) {
+            const resp = await uploadImage(dataSrc, accessToken, undefined, relativePath);
+            return resp.media_id;
+        }
+        return null;
+    });
+
+    const mediaIds = (await Promise.all(uploadPromises)).filter(Boolean) as [string];
+    const firstImageId = mediaIds[0] || "";
+    return {mediaIds, firstImageId }
 }
 
 async function uploadImages(
@@ -165,6 +183,80 @@ export async function publishToWechatDraft(
     }
 
     throw new Error(`上传到公众号草稿失败: ${JSON.stringify(data)}`);
+}
+
+export async function publishNewsPicToWechatDraft(
+    articleOptions: NewsPicOptions,
+    publishOptions: PublishOptions = {},
+): Promise<WechatPublishResponse> {
+    const { title, content, cover, image_urls } = articleOptions;
+    const { appId, appSecret, relativePath } = publishOptions;
+
+    const appIdFinal = appId ?? process.env.WECHAT_APP_ID;
+    const appSecretFinal = appSecret ?? process.env.WECHAT_APP_SECRET;
+
+    if (!appIdFinal || !appSecretFinal) {
+        throw new Error("请通过参数或环境变量 WECHAT_APP_ID / WECHAT_APP_SECRET 提供公众号凭据");
+    }
+
+    const accessToken = await wechatPublisher.getAccessTokenWithCache(appIdFinal, appSecretFinal);
+
+    // 上传正文图片
+    const {mediaIds, firstImageId} = await uploadBatchImages(image_urls as [string], accessToken, relativePath);
+
+    // 处理封面图
+    let thumbMediaId = "";
+
+    if (cover) {
+        const cachedThumbMediaId = mediaIdMapping.get(cover);
+        if (cachedThumbMediaId) {
+            thumbMediaId = cachedThumbMediaId;
+        } else {
+            const resp = await uploadImage(cover, accessToken, "cover.jpg", relativePath);
+            thumbMediaId = resp.media_id;
+        }
+    } else {
+        // 如果是 URL，需要重新上传作为封面，为了获取 media_id
+        if (firstImageId.startsWith("https://mmbiz.qpic.cn")) {
+            const cachedThumbMediaId = mediaIds[0];
+            if (cachedThumbMediaId) {
+                thumbMediaId = cachedThumbMediaId;
+            } else {
+                const resp = await uploadImage(firstImageId, accessToken, "cover.jpg", relativePath);
+                thumbMediaId = resp.media_id;
+            }
+        } else {
+            // 已经是 media_id
+            thumbMediaId = firstImageId;
+        }
+    }
+
+    if (!thumbMediaId) {
+        throw new Error("你必须指定一张封面图或者在正文中至少出现一张图片。");
+    }
+
+    const data = await wechatPublisher.publishNewsPicToDraft(accessToken, {
+        title,
+        content: content,
+        cover: thumbMediaId,
+        image_urls: image_urls,
+    });
+
+    if (data.media_id) {
+        return data;
+    }
+
+    throw new Error(`上传到公众号草稿失败: ${JSON.stringify(data)}`);
+}
+
+export async function publishToNewsPic(
+    title: string,
+    content: string,
+    image_urls: [string],
+    cover: string = "",
+    options: PublishOptions = {},
+): Promise<WechatPublishResponse> {
+    return publishNewsPicToWechatDraft({ title, content, cover, image_urls }, options);
 }
 
 export async function publishToDraft(

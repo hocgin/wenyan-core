@@ -1,4 +1,5 @@
 import type { HttpAdapter } from "./http.js";
+import {NewsPicOptions} from "./publish.js";
 
 const tokenUrl = "https://api.weixin.qq.com/cgi-bin/token";
 const publishUrl = "https://api.weixin.qq.com/cgi-bin/draft/add";
@@ -77,6 +78,30 @@ export function createWechatClient(httpAdapter: HttpAdapter) {
                 data.url = data.url.replace(/^http:\/\//i, "https://");
             }
 
+            return data;
+        },
+
+        async publishNewsPic(accessToken: string, options: NewsPicOptions): Promise<WechatPublishResponse> {
+            let {image_urls = [], ...rest} = options
+
+            const res = await httpAdapter.fetch(`${publishUrl}?access_token=${accessToken}`, {
+                method: "POST",
+                body: JSON.stringify({
+                    articles: [{
+                        article_type: 'newspic',
+                        image_info: {
+                            image_list: image_urls.map((image_media_id) => {
+                                image_media_id
+                            }),
+                        },
+                        ...rest
+                    }],
+                }),
+            });
+
+            if (!res.ok) throw new Error(await res.text());
+            const data: PublishResult = await res.json();
+            assertWechatSuccess(data);
             return data;
         },
 

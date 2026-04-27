@@ -17,6 +17,13 @@ export interface ArticleOptions {
     source_url?: string;
 }
 
+export interface NewsPicOptions {
+    title: string;
+    content: string;
+    cover?: string;
+    image_urls?: [string];
+}
+
 export interface SubmitOptions {
     media_id: string;
 }
@@ -26,6 +33,7 @@ export class WechatPublisher {
     private uploadCacheStore: UploadCacheStore | undefined;
     private uploadMaterial: WechatClient["uploadMaterial"];
     private publishArticle: WechatClient["publishArticle"];
+    private publishNewsPic: WechatClient["publishNewsPic"];
     private fetchAccessToken: WechatClient["fetchAccessToken"];
     private submitArticle: WechatClient["submitArticle"];
 
@@ -34,11 +42,12 @@ export class WechatPublisher {
         tokenStoreAdapter?: TokenStorageAdapter,
         uploadCacheStoreAdapter?: UploadCacheStorageAdapter,
     ) {
-        const { uploadMaterial, publishArticle, fetchAccessToken, submitArticle } = createWechatClient(httpAdapter);
+        const { uploadMaterial, publishArticle, publishNewsPic, fetchAccessToken, submitArticle } = createWechatClient(httpAdapter);
         this.uploadMaterial = uploadMaterial;
         this.publishArticle = publishArticle;
         this.fetchAccessToken = fetchAccessToken;
         this.submitArticle = submitArticle;
+        this.publishNewsPic = publishNewsPic;
         this.tokenStore = tokenStoreAdapter ? new TokenStore(tokenStoreAdapter) : undefined;
         this.uploadCacheStore = uploadCacheStoreAdapter ? new UploadCacheStore(uploadCacheStoreAdapter) : undefined;
     }
@@ -80,6 +89,10 @@ export class WechatPublisher {
 
     public async publishToDraft(accessToken: string, options: WechatPublishOptions): Promise<WechatPublishResponse> {
         return await this.publishArticle(accessToken, options);
+    }
+
+    public async publishNewsPicToDraft(accessToken: string, options: NewsPicOptions): Promise<WechatPublishResponse> {
+        return await this.publishNewsPic(accessToken, options);
     }
 
     public async submit(accessToken: string, options: WechatSubmitOptions): Promise<WechatSubmitResponse> {
