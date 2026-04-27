@@ -11,6 +11,7 @@ export interface WechatPublishOptions {
     author?: string;
     content: string;
     thumb_media_id: string;
+    article_type?: string;
     content_source_url?: string;
 }
 export interface WechatSubmitOptions { media_id: string }
@@ -82,7 +83,7 @@ export function createWechatClient(httpAdapter: HttpAdapter) {
         },
 
         async publishNewsPic(accessToken: string, options: NewsPicOptions): Promise<WechatPublishResponse> {
-            let {image_urls = [], ...rest} = options
+            let {thumb_media_ids = [], ...rest} = options
 
             const res = await httpAdapter.fetch(`${publishUrl}?access_token=${accessToken}`, {
                 method: "POST",
@@ -90,7 +91,7 @@ export function createWechatClient(httpAdapter: HttpAdapter) {
                     articles: [{
                         article_type: 'newspic',
                         image_info: {
-                            image_list: image_urls.map((image_media_id) => {
+                            image_list: thumb_media_ids.map((image_media_id) => {
                                 image_media_id
                             }),
                         },

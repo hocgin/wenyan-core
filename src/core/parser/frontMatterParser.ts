@@ -4,6 +4,7 @@ export interface FrontMatterResult {
     body: string;
     title?: string;
     cover?: string;
+    article_type?: string;
     description?: string;
     author?: string;
     source_url?: string;
@@ -15,7 +16,7 @@ export async function handleFrontMatter(markdown: string): Promise<FrontMatterRe
     const { attributes, body } = fm(markdown);
     const result: FrontMatterResult = { body: body || "" };
     let head = "";
-    const { title, description, cover, author, source_url } = attributes;
+    const { title, description, cover, author, source_url, article_type } = attributes;
     if (title) {
         result.title = title;
     }
@@ -25,6 +26,9 @@ export async function handleFrontMatter(markdown: string): Promise<FrontMatterRe
     }
     if (cover) {
         result.cover = cover;
+    }
+    if (article_type) {
+        result.article_type = article_type;
     }
     if (head) {
         result.body = head + result.body;

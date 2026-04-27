@@ -232,3 +232,19 @@ export async function uploadCover(
     }
     return cover;
 }
+
+export async function uploadImages(
+    serverUrl: string,
+    headers: Record<string, string>,
+    imageUrls: [string],
+    relativePath?: string,
+): Promise<[string]> {
+    const uploadPromises = imageUrls.map(async (dataSrc) => {
+        if (dataSrc) {
+            return await uploadCover(serverUrl, headers, dataSrc, relativePath);
+        }
+        return null;
+    });
+    const mediaIds = (await Promise.all(uploadPromises)).filter(Boolean);
+    return mediaIds as [string]
+}

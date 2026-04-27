@@ -13,6 +13,7 @@ export interface ArticleOptions {
     title: string;
     content: string;
     cover?: string;
+    article_type?: string;
     author?: string;
     source_url?: string;
 }
@@ -21,7 +22,7 @@ export interface NewsPicOptions {
     title: string;
     content: string;
     cover?: string;
-    image_urls?: [string];
+    thumb_media_ids?: [string];
 }
 
 export interface SubmitOptions {

@@ -7,7 +7,7 @@ import {WechatPublishResponse, WechatSubmitOptions, WechatSubmitResponse, Wechat
 import { nodeHttpAdapter } from "./nodeHttpAdapter.js";
 import { NodeTokenStorageAdapter } from "./tokenStoreNodeAdapter.js";
 import { NodeUploadCacheAdapter } from "./uploadCacheNodeAdapter.js";
-import {ArticleOptions, NewsPicOptions, WechatPublisher} from "../publish.js";
+import {ArticleOptions, WechatPublisher} from "../publish.js";
 
 const mediaIdMapping = new Map<string, string>(); // 微信 url 和 media_id 的映射
 const wechatPublisher = new WechatPublisher(nodeHttpAdapter, new NodeTokenStorageAdapter(), new NodeUploadCacheAdapter());
@@ -67,32 +67,32 @@ async function uploadImage(
     mediaIdMapping.set(data.url, data.media_id);
     return data;
 }
-
-async function uploadBatchImages(
-    imageUrls: [string],
-    accessToken: string,
-    relativePath?: string,
-){
-    const uploadPromises = imageUrls.map(async (dataSrc) => {
-        if (dataSrc) {
-            const resp = await uploadImage(dataSrc, accessToken, undefined, relativePath);
-            return resp.media_id;
-        }
-        return null;
-    });
-
-    const mediaIds = (await Promise.all(uploadPromises)).filter(Boolean) as [string];
-    const firstImageId = mediaIds[0] || "";
-    return {mediaIds, firstImageId }
-}
+//
+// async function uploadBatchImages(
+//     imageUrls: [string],
+//     accessToken: string,
+//     relativePath?: string,
+// ){
+//     const uploadPromises = imageUrls.map(async (dataSrc) => {
+//         if (dataSrc) {
+//             const resp = await uploadImage(dataSrc, accessToken, undefined, relativePath);
+//             return resp.media_id;
+//         }
+//         return null;
+//     });
+//
+//     const mediaIds = (await Promise.all(uploadPromises)).filter(Boolean) as [string];
+//     const firstImageId = mediaIds[0] || "";
+//     return {mediaIds, firstImageId }
+// }
 
 async function uploadImages(
     content: string,
     accessToken: string,
     relativePath?: string,
-): Promise<{ html: string; firstImageId: string }> {
+): Promise<{ html: string; firstImageId: string, mediaIds: [string] | null }> {
     if (!content.includes("<img")) {
-        return { html: content, firstImageId: "" };
+        return { html: content, firstImageId: "", mediaIds: null };
     }
 
     const dom = new JSDOM(content);
@@ -113,18 +113,18 @@ async function uploadImages(
         return null;
     });
 
-    const mediaIds = (await Promise.all(uploadPromises)).filter(Boolean);
+    const mediaIds = (await Promise.all(uploadPromises)).filter(Boolean) as [string];
     const firstImageId = mediaIds[0] || "";
 
     const updatedHtml = dom.serialize();
-    return { html: updatedHtml, firstImageId };
+    return { html: updatedHtml, firstImageId, mediaIds };
 }
 
 export async function publishToWechatDraft(
     articleOptions: ArticleOptions,
     publishOptions: PublishOptions = {},
 ): Promise<WechatPublishResponse> {
-    const { title, content, cover, author, source_url } = articleOptions;
+    const { title, content, cover, article_type, author, source_url } = articleOptions;
     const { appId, appSecret, relativePath } = publishOptions;
 
     const appIdFinal = appId ?? process.env.WECHAT_APP_ID;
@@ -137,7 +137,7 @@ export async function publishToWechatDraft(
     const accessToken = await wechatPublisher.getAccessTokenWithCache(appIdFinal, appSecretFinal);
 
     // 上传正文图片
-    const { html, firstImageId } = await uploadImages(content, accessToken, relativePath);
+    const { html, firstImageId, mediaIds } = await uploadImages(content, accessToken, relativePath);
 
     // 处理封面图
     let thumbMediaId = "";
@@ -170,94 +170,110 @@ export async function publishToWechatDraft(
         throw new Error("你必须指定一张封面图或者在正文中至少出现一张图片。");
     }
 
-    const data = await wechatPublisher.publishToDraft(accessToken, {
-        title,
-        content: html,
-        thumb_media_id: thumbMediaId,
-        author,
-        content_source_url: source_url,
-    });
+    let data:any = null
+    if (article_type == 'newspic') {
+        data = await wechatPublisher.publishNewsPicToDraft(accessToken, {
+            title: title,
+            content: content,
+            cover: cover,
+            thumb_media_ids: mediaIds as [string],
+        })
 
-    if (data.media_id) {
-        return data;
-    }
-
-    throw new Error(`上传到公众号草稿失败: ${JSON.stringify(data)}`);
-}
-
-export async function publishNewsPicToWechatDraft(
-    articleOptions: NewsPicOptions,
-    publishOptions: PublishOptions = {},
-): Promise<WechatPublishResponse> {
-    const { title, content, cover, image_urls } = articleOptions;
-    const { appId, appSecret, relativePath } = publishOptions;
-
-    const appIdFinal = appId ?? process.env.WECHAT_APP_ID;
-    const appSecretFinal = appSecret ?? process.env.WECHAT_APP_SECRET;
-
-    if (!appIdFinal || !appSecretFinal) {
-        throw new Error("请通过参数或环境变量 WECHAT_APP_ID / WECHAT_APP_SECRET 提供公众号凭据");
-    }
-
-    const accessToken = await wechatPublisher.getAccessTokenWithCache(appIdFinal, appSecretFinal);
-
-    // 上传正文图片
-    const {mediaIds, firstImageId} = await uploadBatchImages(image_urls as [string], accessToken, relativePath);
-
-    // 处理封面图
-    let thumbMediaId = "";
-
-    if (cover) {
-        const cachedThumbMediaId = mediaIdMapping.get(cover);
-        if (cachedThumbMediaId) {
-            thumbMediaId = cachedThumbMediaId;
-        } else {
-            const resp = await uploadImage(cover, accessToken, "cover.jpg", relativePath);
-            thumbMediaId = resp.media_id;
+        if (data.media_id) {
+            return data;
         }
     } else {
-        // 如果是 URL，需要重新上传作为封面，为了获取 media_id
-        if (firstImageId.startsWith("https://mmbiz.qpic.cn")) {
-            const cachedThumbMediaId = mediaIds[0];
-            if (cachedThumbMediaId) {
-                thumbMediaId = cachedThumbMediaId;
-            } else {
-                const resp = await uploadImage(firstImageId, accessToken, "cover.jpg", relativePath);
-                thumbMediaId = resp.media_id;
-            }
-        } else {
-            // 已经是 media_id
-            thumbMediaId = firstImageId;
+        data = await wechatPublisher.publishToDraft(accessToken, {
+            title,
+            content: html,
+            thumb_media_id: thumbMediaId,
+            author,
+            content_source_url: source_url,
+        });
+
+        if (data.media_id) {
+            return data;
         }
     }
 
-    if (!thumbMediaId) {
-        throw new Error("你必须指定一张封面图或者在正文中至少出现一张图片。");
-    }
 
-    const data = await wechatPublisher.publishNewsPicToDraft(accessToken, {
-        title,
-        content: content,
-        cover: thumbMediaId,
-        image_urls: image_urls,
-    });
-
-    if (data.media_id) {
-        return data;
-    }
 
     throw new Error(`上传到公众号草稿失败: ${JSON.stringify(data)}`);
 }
 
-export async function publishToNewsPic(
-    title: string,
-    content: string,
-    image_urls: [string],
-    cover: string = "",
-    options: PublishOptions = {},
-): Promise<WechatPublishResponse> {
-    return publishNewsPicToWechatDraft({ title, content, cover, image_urls }, options);
-}
+// export async function publishNewsPicToWechatDraft(
+//     articleOptions: NewsPicOptions,
+//     publishOptions: PublishOptions = {},
+// ): Promise<WechatPublishResponse> {
+//     const { title, content, cover, thumb_media_ids } = articleOptions;
+//     const { appId, appSecret, relativePath } = publishOptions;
+//
+//     const appIdFinal = appId ?? process.env.WECHAT_APP_ID;
+//     const appSecretFinal = appSecret ?? process.env.WECHAT_APP_SECRET;
+//
+//     if (!appIdFinal || !appSecretFinal) {
+//         throw new Error("请通过参数或环境变量 WECHAT_APP_ID / WECHAT_APP_SECRET 提供公众号凭据");
+//     }
+//
+//     const accessToken = await wechatPublisher.getAccessTokenWithCache(appIdFinal, appSecretFinal);
+//
+//     // 上传正文图片
+//     const {mediaIds, firstImageId} = await uploadBatchImages(image_urls as [string], accessToken, relativePath);
+//
+//     // 处理封面图
+//     let thumbMediaId = "";
+//
+//     if (cover) {
+//         const cachedThumbMediaId = mediaIdMapping.get(cover);
+//         if (cachedThumbMediaId) {
+//             thumbMediaId = cachedThumbMediaId;
+//         } else {
+//             const resp = await uploadImage(cover, accessToken, "cover.jpg", relativePath);
+//             thumbMediaId = resp.media_id;
+//         }
+//     } else {
+//         // 如果是 URL，需要重新上传作为封面，为了获取 media_id
+//         if (firstImageId.startsWith("https://mmbiz.qpic.cn")) {
+//             const cachedThumbMediaId = mediaIds[0];
+//             if (cachedThumbMediaId) {
+//                 thumbMediaId = cachedThumbMediaId;
+//             } else {
+//                 const resp = await uploadImage(firstImageId, accessToken, "cover.jpg", relativePath);
+//                 thumbMediaId = resp.media_id;
+//             }
+//         } else {
+//             // 已经是 media_id
+//             thumbMediaId = firstImageId;
+//         }
+//     }
+//
+//     if (!thumbMediaId) {
+//         throw new Error("你必须指定一张封面图或者在正文中至少出现一张图片。");
+//     }
+//
+//     const data = await wechatPublisher.publishNewsPicToDraft(accessToken, {
+//         title,
+//         content: content,
+//         cover: thumbMediaId,
+//         image_urls: image_urls,
+//     });
+//
+//     if (data.media_id) {
+//         return data;
+//     }
+//
+//     throw new Error(`上传到公众号草稿失败: ${JSON.stringify(data)}`);
+// }
+
+// export async function publishToNewsPic(
+//     title: string,
+//     content: string,
+//     image_urls: [string],
+//     cover: string = "",
+//     options: PublishOptions = {},
+// ): Promise<WechatPublishResponse> {
+//     return publishNewsPicToWechatDraft({ title, content, cover, image_urls }, options);
+// }
 
 export async function publishToDraft(
     title: string,

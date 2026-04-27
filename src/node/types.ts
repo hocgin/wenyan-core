@@ -29,6 +29,7 @@ export interface StyledContent {
     content: string;
     title?: string;
     cover?: string;
+    article_type?: string;
     description?: string;
     author?: string;
     source_url?: string;

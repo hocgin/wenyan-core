@@ -47,6 +47,7 @@ export async function renderAndPublish(
             title: gzhContent.title,
             content: gzhContent.content,
             cover: gzhContent.cover,
+            article_type: gzhContent.article_type,
             author: gzhContent.author,
             source_url: gzhContent.source_url,
         },

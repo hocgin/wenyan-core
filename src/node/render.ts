@@ -49,6 +49,7 @@ export async function renderStyledContent(content: string, options: ApplyStylesO
         content: result,
         title: preHandlerContent.title,
         cover: preHandlerContent.cover,
+        article_type: preHandlerContent.article_type,
         description: preHandlerContent.description,
         author: preHandlerContent.author,
         source_url: preHandlerContent.source_url,
