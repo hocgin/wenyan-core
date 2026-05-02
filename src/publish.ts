@@ -6,7 +6,7 @@ import {
     WechatPublishOptions,
     WechatPublishResponse,
     WechatUploadResponse,
-    type WechatClient, WechatSubmitResponse, WechatSubmitOptions,
+    type WechatClient, WechatSubmitResponse, WechatSubmitOptions, WechatNewsPicOptions,
 } from "./wechat.js";
 
 export interface ArticleOptions {
@@ -92,7 +92,7 @@ export class WechatPublisher {
         return await this.publishArticle(accessToken, options);
     }
 
-    public async publishNewsPicToDraft(accessToken: string, options: NewsPicOptions): Promise<WechatPublishResponse> {
+    public async publishNewsPicToDraft(accessToken: string, options: WechatNewsPicOptions): Promise<WechatPublishResponse> {
         return await this.publishNewsPic(accessToken, options);
     }
 

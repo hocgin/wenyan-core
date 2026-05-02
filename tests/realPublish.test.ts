@@ -10,7 +10,7 @@ describe("publish.ts tests", () => {
         const html = await readFile(join(__dirname, "publish.html"), "utf8");
         const data = await publishToDraft("自动化测试", html, "", {
             relativePath: __dirname,
-        });
+        }, 'newspic');
         expect(data).toHaveProperty("media_id");
         expect(data.media_id).toBeTruthy();
     });

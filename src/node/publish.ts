@@ -175,7 +175,7 @@ export async function publishToWechatDraft(
         data = await wechatPublisher.publishNewsPicToDraft(accessToken, {
             title: title,
             content: content,
-            cover: cover,
+            thumb_media_id: thumbMediaId,
             thumb_media_ids: mediaIds as [string],
         })
 
@@ -280,8 +280,9 @@ export async function publishToDraft(
     content: string,
     cover: string = "",
     options: PublishOptions = {},
+    article_type: string | undefined = undefined,
 ): Promise<WechatPublishResponse> {
-    return publishToWechatDraft({ title, content, cover }, options);
+    return publishToWechatDraft({ title, content, article_type, cover }, options);
 }
 
 

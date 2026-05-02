@@ -1,5 +1,4 @@
 import type { HttpAdapter } from "./http.js";
-import {NewsPicOptions} from "./publish.js";
 
 const tokenUrl = "https://api.weixin.qq.com/cgi-bin/token";
 const publishUrl = "https://api.weixin.qq.com/cgi-bin/draft/add";
@@ -13,6 +12,15 @@ export interface WechatPublishOptions {
     thumb_media_id: string;
     article_type?: string;
     content_source_url?: string;
+}
+export interface WechatNewsPicOptions {
+    title: string;
+    author?: string;
+    content: string;
+    thumb_media_id: string;
+    article_type?: string;
+    content_source_url?: string;
+    thumb_media_ids: [string];
 }
 export interface WechatSubmitOptions { media_id: string }
 
@@ -82,21 +90,22 @@ export function createWechatClient(httpAdapter: HttpAdapter) {
             return data;
         },
 
-        async publishNewsPic(accessToken: string, options: NewsPicOptions): Promise<WechatPublishResponse> {
+        async publishNewsPic(accessToken: string, options: WechatNewsPicOptions): Promise<WechatPublishResponse> {
             let {thumb_media_ids = [], ...rest} = options
 
+            let articles = [{
+                article_type: 'newspic',
+                image_info: {
+                    image_list: thumb_media_ids.map((item) => ({
+                        image_media_id: item
+                    })),
+                },
+                ...rest
+            }];
             const res = await httpAdapter.fetch(`${publishUrl}?access_token=${accessToken}`, {
                 method: "POST",
                 body: JSON.stringify({
-                    articles: [{
-                        article_type: 'newspic',
-                        image_info: {
-                            image_list: thumb_media_ids.map((image_media_id) => {
-                                image_media_id
-                            }),
-                        },
-                        ...rest
-                    }],
+                    articles: articles,
                 }),
             });
 
