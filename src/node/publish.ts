@@ -137,7 +137,7 @@ export async function publishToWechatDraft(
     const accessToken = await wechatPublisher.getAccessTokenWithCache(appIdFinal, appSecretFinal);
 
     // 上传正文图片
-    const { html, firstImageId, mediaIds } = await uploadImages(content, accessToken, relativePath);
+    const { html, firstImageId, mediaIds = [] } = await uploadImages(content, accessToken, relativePath);
 
     // 处理封面图
     let thumbMediaId = "";
@@ -176,7 +176,7 @@ export async function publishToWechatDraft(
             title: title,
             content: content,
             thumb_media_id: thumbMediaId,
-            thumb_media_ids: mediaIds as [string],
+            thumb_media_ids: (mediaIds ?? []) as [string],
         })
 
         if (data.media_id) {

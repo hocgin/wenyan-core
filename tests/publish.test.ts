@@ -44,3 +44,31 @@ describe("publish.ts tests", () => {
         ).rejects.toThrow(/上传到公众号草稿失败，错误码：41005，mock error/);
     });
 });
+
+
+describe("publish.ts tests type 2", () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+    it("should publish article successfully", async () => {
+        const result = await publishToDraft(
+            "测试标题", "<p>正文</p>", "/Users/hocgin/Projects/wenyan-core/tests/wenyan.jpg", {},"newspic");
+        expect(result).toHaveProperty("media_id", "mock_media_id");
+    });
+
+    it("should submit article successfully", async () => {
+        const result = await submit({
+            media_id: "mock_media_id",
+        });
+        expect(result).toHaveProperty("publish_id", "mock_publish_id");
+    });
+
+    it("should throw error when no media_id returned", async () => {
+        const { publishArticle } = await import("../src/node/wechatApi");
+        publishArticle.mockResolvedValueOnce({ errcode: 41005, errmsg: "mock error" });
+
+        await expect(
+            publishToDraft("失败测试", "<p>正文</p>", "tests/wenyan.jpg")
+        ).rejects.toThrow(/上传到公众号草稿失败，错误码：41005，mock error/);
+    });
+});

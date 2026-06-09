@@ -100,6 +100,9 @@ export function createWechatClient(httpAdapter: HttpAdapter) {
                         image_media_id: item
                     })),
                 },
+                need_open_comment: 1,
+                only_fans_can_comment: 1,
+                content: content,
                 ...rest
             }];
             const res = await httpAdapter.fetch(`${publishUrl}?access_token=${accessToken}`, {
