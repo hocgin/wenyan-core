@@ -52,7 +52,7 @@ describe("publish.ts tests type 2", () => {
     });
     it("should publish article successfully", async () => {
         const result = await publishToDraft(
-            "测试标题", "<p>正文</p>", "/Users/hocgin/Projects/wenyan-core/tests/wenyan.jpg", {},"newspic");
+            "测试标题", "<p>正文内容测试</p>", "/Users/hocgin/Projects/wenyan-core/tests/wenyan.jpg", {},"newspic");
         expect(result).toHaveProperty("media_id", "mock_media_id");
     });
 

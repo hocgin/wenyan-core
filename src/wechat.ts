@@ -93,10 +93,11 @@ export function createWechatClient(httpAdapter: HttpAdapter) {
         async publishNewsPic(accessToken: string, options: WechatNewsPicOptions): Promise<WechatPublishResponse> {
             let {thumb_media_ids = [], content, thumb_media_id, ...rest} = options
 
+            let allMediaIds = [...thumb_media_ids, thumb_media_id].filter(Boolean);
             let articles = [{
                 article_type: 'newspic',
                 image_info: {
-                    image_list: thumb_media_ids.map((item) => ({
+                    image_list: allMediaIds.map((item) => ({
                         image_media_id: item
                     })),
                 },
