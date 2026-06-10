@@ -93,7 +93,14 @@ export function createWechatClient(httpAdapter: HttpAdapter) {
         async publishNewsPic(accessToken: string, options: WechatNewsPicOptions): Promise<WechatPublishResponse> {
             let {thumb_media_ids = [], content, thumb_media_id, ...rest} = options
 
-            let allMediaIds = [...thumb_media_ids, thumb_media_id].filter(Boolean);
+            let allMediaIds = [...new Set([...thumb_media_ids, thumb_media_id])].filter(Boolean);
+            let rawContent = content.replace(/<img\b[^>]*\/?>/gi, '')
+                .replace(/<\/p>/gi, '\n')
+                .replace(/<p[^>]*>/gi, '')
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<[^>]+>/g, '')
+                .replace(/\n{3,}/g, '\n\n')
+                .trim()
             let articles = [{
                 article_type: 'newspic',
                 image_info: {
@@ -103,7 +110,7 @@ export function createWechatClient(httpAdapter: HttpAdapter) {
                 },
                 need_open_comment: 1,
                 only_fans_can_comment: 1,
-                content: content,
+                content: rawContent,
                 ...rest
             }];
             const res = await httpAdapter.fetch(`${publishUrl}?access_token=${accessToken}`, {
